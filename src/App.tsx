@@ -34,6 +34,7 @@ const YOUR_NAME = '[ТВОЁ ИМЯ]'
 const PHOTO_STORAGE_KEY = 'birthday-love-photos'
 const TIMELINE_STORAGE_KEY = 'birthday-love-timeline'
 const REASONS_STORAGE_KEY = 'birthday-love-reasons'
+const WISH_STORAGE_KEY = 'birthday-love-wishes'
 
 const placeholderPhotos: PhotoItem[] = [
   { id: 'p1', src: 'https://picsum.photos/seed/love-1/600/800', caption: 'Счастливый момент' },
@@ -87,6 +88,18 @@ const placeholderReasons = [
   'Я люблю твою искренность и нежность',
 ]
 
+const loveInLanguages = [
+  'Я люблю тебя',
+  'I love you',
+  'Je t’aime',
+  'Ich liebe dich',
+  'Ti amo',
+  'Te amo',
+  '愛してる',
+  '사랑해',
+  'أنا أحبك',
+]
+
 const formatTogetherTime = (startDate: Date) => {
   const diff = Date.now() - startDate.getTime()
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
@@ -123,6 +136,20 @@ function App() {
   const [reasonModalOpen, setReasonModalOpen] = useState(false)
   const [shootingStar, setShootingStar] = useState(false)
   const [scrollY, setScrollY] = useState(0)
+  const [wishEditorOpen, setWishEditorOpen] = useState(false)
+  const [wishInput, setWishInput] = useState('')
+  const [wishStatus, setWishStatus] = useState('')
+  const [wishes, setWishes] = useState<string[]>(() => {
+    const savedWishes = localStorage.getItem(WISH_STORAGE_KEY)
+    if (!savedWishes) return []
+    try {
+      const parsed = JSON.parse(savedWishes)
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+    } catch {
+      return []
+    }
+  })
+  const [loveLanguageIndex, setLoveLanguageIndex] = useState(0)
   const [newTimeline, setNewTimeline] = useState({ date: '', title: '', description: '', image: '' })
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -145,6 +172,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(REASONS_STORAGE_KEY, JSON.stringify(reasons))
   }, [reasons])
+
+  useEffect(() => {
+    localStorage.setItem(WISH_STORAGE_KEY, JSON.stringify(wishes))
+  }, [wishes])
 
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY)
@@ -174,6 +205,15 @@ function App() {
   )
 
   const heroText = `С Днём Рождения, ${GIRL_NAME}!`
+  const heroChars = useMemo(() => heroText.split(''), [heroText])
+  const rotatingLoveText = loveInLanguages[loveLanguageIndex]
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLoveLanguageIndex((prev) => (prev + 1) % loveInLanguages.length)
+    }, 2000)
+    return () => clearInterval(timer)
+  }, [])
 
   const handleOpenGift = () => {
     setBurstItems(
@@ -239,6 +279,18 @@ function App() {
     setReasonModalOpen(false)
   }
 
+  const handleWishSubmit = () => {
+    const wish = wishInput.trim()
+    if (!wish) return
+    setWishes((prev) => [wish, ...prev])
+    setWishInput('')
+    setWishEditorOpen(false)
+    setWishStatus('Желание отправлено к звёздам ✨')
+    setShootingStar(true)
+    setTimeout(() => setShootingStar(false), 1500)
+    setTimeout(() => setWishStatus(''), 2600)
+  }
+
   return (
     <>
       <audio
@@ -271,6 +323,11 @@ function App() {
             exit={{ opacity: 0, scale: 1.05 }}
             transition={{ duration: 0.8 }}
           >
+            <div className="intro-glow" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
             <button
               type="button"
               className="music-toggle"
@@ -337,14 +394,15 @@ function App() {
               </div>
 
               <h1>
-                {heroText.split('').map((char, index) => (
+                {heroChars.map((char, index) => (
                   <motion.span
                     key={`${char}-${index}`}
+                    className={char === ' ' ? 'title-space' : undefined}
                     initial={{ opacity: 0, y: 18 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.04 }}
                   >
-                    {char}
+                    {char === ' ' ? '\u00A0' : char}
                   </motion.span>
                 ))}
               </h1>
@@ -374,7 +432,13 @@ function App() {
               </p>
             </motion.section>
 
-            <section className="section">
+            <motion.section
+              className="section section-zone zone-gallery"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.7 }}
+            >
               <div className="section-head">
                 <h2>Галерея воспоминаний</h2>
                 <button type="button" className="add-button" onClick={() => fileInputRef.current?.click()}>
@@ -416,9 +480,15 @@ function App() {
                   </motion.button>
                 ))}
               </div>
-            </section>
+            </motion.section>
 
-            <section className="section timeline-section">
+            <motion.section
+              className="section section-zone zone-timeline timeline-section"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.75 }}
+            >
               <h2>Наша история</h2>
               <div className="timeline">
                 {timeline.map((item, index) => (
@@ -488,9 +558,15 @@ function App() {
                   Добавить
                 </button>
               </form>
-            </section>
+            </motion.section>
 
-            <section className="section">
+            <motion.section
+              className="section section-zone zone-reasons"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.7 }}
+            >
               <div className="section-head">
                 <h2>Почему я тебя люблю</h2>
                 <button type="button" className="add-button" onClick={() => setReasonModalOpen(true)}>
@@ -512,9 +588,29 @@ function App() {
                   </motion.div>
                 ))}
               </div>
-            </section>
+            </motion.section>
 
-            <section className="section wishes">
+            <motion.section
+              className="section section-zone zone-wishes wishes"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.7 }}
+            >
+              <div className="love-board" aria-live="polite">
+                <p>На всех языках мира:</p>
+                <AnimatePresence mode="wait">
+                  <motion.strong
+                    key={rotatingLoveText}
+                    initial={{ opacity: 0, y: 8, filter: 'blur(5px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: -8, filter: 'blur(5px)' }}
+                    transition={{ duration: 0.45 }}
+                  >
+                    {rotatingLoveText}
+                  </motion.strong>
+                </AnimatePresence>
+              </div>
               <h2>С днём рождения, моя любовь!</h2>
               <p>
                 Пусть каждый твой день будет наполнен счастьем, светом и исполнением самых заветных
@@ -523,15 +619,33 @@ function App() {
               <button
                 type="button"
                 className="add-button"
-                onClick={() => {
-                  setShootingStar(true)
-                  setTimeout(() => setShootingStar(false), 1500)
-                }}
+                onClick={() => setWishEditorOpen((prev) => !prev)}
               >
                 <Star size={16} /> Загадать желание
               </button>
+              <AnimatePresence>
+                {wishEditorOpen && (
+                  <motion.div
+                    className="wish-editor"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                  >
+                    <textarea
+                      value={wishInput}
+                      onChange={(event) => setWishInput(event.target.value)}
+                      placeholder="Напиши своё желание..."
+                    />
+                    <button type="button" className="add-button" onClick={handleWishSubmit}>
+                      Отправить желание
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {wishStatus && <p className="wish-status">{wishStatus}</p>}
+              <p className="wish-storage-note">Сохранено локально: {wishes.length}</p>
               {shootingStar && <span className="shooting-star" aria-hidden="true" />}
-            </section>
+            </motion.section>
 
             <footer className="section footer">
               <Heart size={16} />
