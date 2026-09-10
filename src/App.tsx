@@ -87,22 +87,24 @@ const placeholderReasons = [
   'Я люблю твою искренность и нежность',
 ]
 
-const readLocalStorage = <T,>(key: string, fallback: T): T => {
-  const raw = localStorage.getItem(key)
-  if (!raw) return fallback
-  try {
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
-  }
-}
-
 const formatTogetherTime = (startDate: Date) => {
   const diff = Date.now() - startDate.getTime()
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
   const minutes = Math.floor((diff / (1000 * 60)) % 60)
   return { days, hours, minutes }
+}
+
+const sanitizeImageUrl = (value: string) => {
+  try {
+    const parsed = new URL(value, window.location.origin)
+    if (['http:', 'https:', 'data:', 'blob:'].includes(parsed.protocol)) {
+      return parsed.toString()
+    }
+  } catch {
+    return ''
+  }
+  return ''
 }
 
 function App() {
@@ -113,11 +115,9 @@ function App() {
   >([])
   const [musicEnabled, setMusicEnabled] = useState(false)
   const [togetherTime, setTogetherTime] = useState(formatTogetherTime(RELATIONSHIP_START))
-  const [photos, setPhotos] = useState<PhotoItem[]>(() => readLocalStorage(PHOTO_STORAGE_KEY, placeholderPhotos))
-  const [timeline, setTimeline] = useState<TimelineItem[]>(() =>
-    readLocalStorage(TIMELINE_STORAGE_KEY, placeholderTimeline),
-  )
-  const [reasons, setReasons] = useState<string[]>(() => readLocalStorage(REASONS_STORAGE_KEY, placeholderReasons))
+  const [photos, setPhotos] = useState<PhotoItem[]>(placeholderPhotos)
+  const [timeline, setTimeline] = useState<TimelineItem[]>(placeholderTimeline)
+  const [reasons, setReasons] = useState<string[]>(placeholderReasons)
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoItem | null>(null)
   const [newReason, setNewReason] = useState('')
   const [reasonModalOpen, setReasonModalOpen] = useState(false)
@@ -429,7 +429,10 @@ function App() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.3 }}
                   >
-                    <img src={item.image} alt={item.title} />
+                    <img
+                      src={sanitizeImageUrl(item.image) || 'https://picsum.photos/seed/new-moment/220/220'}
+                      alt={item.title}
+                    />
                     <div>
                       <time>{item.date}</time>
                       <h3>{item.title}</h3>
