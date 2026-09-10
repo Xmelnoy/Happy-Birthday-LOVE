@@ -120,6 +120,15 @@ const sanitizeImageUrl = (value: string) => {
   return ''
 }
 
+const encodeWish = (wish: string) => btoa(unescape(encodeURIComponent(wish)))
+const decodeWish = (wish: string) => {
+  try {
+    return decodeURIComponent(escape(atob(wish)))
+  } catch {
+    return ''
+  }
+}
+
 function App() {
   const [giftOpened, setGiftOpened] = useState(false)
   const [showBurst, setShowBurst] = useState(false)
@@ -144,7 +153,11 @@ function App() {
     if (!savedWishes) return []
     try {
       const parsed = JSON.parse(savedWishes)
-      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+      if (!Array.isArray(parsed)) return []
+      return parsed
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => decodeWish(item))
+        .filter(Boolean)
     } catch {
       return []
     }
@@ -174,7 +187,7 @@ function App() {
   }, [reasons])
 
   useEffect(() => {
-    localStorage.setItem(WISH_STORAGE_KEY, JSON.stringify(wishes))
+    localStorage.setItem(WISH_STORAGE_KEY, JSON.stringify(wishes.map((wish) => encodeWish(wish))))
   }, [wishes])
 
   useEffect(() => {
